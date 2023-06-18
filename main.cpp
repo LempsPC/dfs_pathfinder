@@ -2,17 +2,20 @@
 #include <fstream>
 #include <vector>
 #include <algorithm>
-#include <unordered_set>
+
 
 struct TreeNode {
     int uid;
     TreeNode* parent;
-    bool hasChildren;
     std::vector<TreeNode*> children;
 
-    TreeNode(int u, TreeNode* p, int t) : uid(u), parent(p), hasChildren(t) {}
+    TreeNode(int u, TreeNode* p) : uid(u), parent(p){}
 };
 
+/**
+ * Returns node using recursive DFS search.
+ * @return pointer to found node if node found 
+*/
 TreeNode* findNode(TreeNode* node, int uid) {
     if (!node) {
         return nullptr;
@@ -38,7 +41,10 @@ void addChild(TreeNode* parent, TreeNode* child) {
         parent->children.push_back(child);
     }
 }
-
+/**
+ * Iteratively populates tree from data read from inputfile
+ * TODO: advandced error handling when input tree is broken.
+*/
 TreeNode* createTree(std::ifstream& inputFile) {
     int N;
     inputFile >> N;
@@ -49,7 +55,7 @@ TreeNode* createTree(std::ifstream& inputFile) {
         int uid, parentUid, type;
         inputFile >> uid >> parentUid >> type;
 
-        TreeNode* node = new TreeNode(uid, nullptr, type);
+        TreeNode* node = new TreeNode(uid, nullptr);
 
         if (!root) {
             root = node;
@@ -62,7 +68,9 @@ TreeNode* createTree(std::ifstream& inputFile) {
 
     return root;
 }
-
+/**
+ * Recursively deletes tree and frees up memory.
+*/
 void deleteTree(TreeNode* node) {
     if (!node) {
         return;
@@ -78,8 +86,11 @@ void deleteTree(TreeNode* node) {
 bool isValueInVector(const std::vector<int>& vector, int value) {
     return std::find(vector.begin(), vector.end(), value) != vector.end();
 }
-
-void dfs(TreeNode* currentNode, int endUid, std::vector<int>& visited, std::vector<int>& parent, std::vector<int>& shortestPath, int startUid, bool* found) 
+/**
+ * DFS algorithm finding shortest path between 2 leaf nodes.
+ * If no path found, returns empty vector
+*/
+void dfs(TreeNode* currentNode, int endUid, std::vector<int>& visited, std::vector<int>& shortestPath, int startUid, bool* found) 
 {
     visited.push_back(currentNode->uid);
 
@@ -91,14 +102,13 @@ void dfs(TreeNode* currentNode, int endUid, std::vector<int>& visited, std::vect
     // Traverse the children of the current node if target not found
     for (TreeNode* child : currentNode->children) {
         if (!*found && (!isValueInVector(visited, child->uid)) ) {
-            parent.push_back(currentNode->uid);
-            dfs(child, endUid, visited, parent, shortestPath, startUid, found);
+            dfs(child, endUid, visited, shortestPath, startUid, found);
         }
     }
     //if children are traversed, but no target found and node has parent, visit parent
     if ( (currentNode->parent) && (!isValueInVector(visited, currentNode->parent->uid)) && !*found )
     {
-        dfs(currentNode->parent, endUid, visited, parent, shortestPath, startUid, found);
+        dfs(currentNode->parent, endUid, visited, shortestPath, startUid, found);
     }
     
     // If the shortest path is found, backtrack from the endUid to the startUid
@@ -108,23 +118,32 @@ void dfs(TreeNode* currentNode, int endUid, std::vector<int>& visited, std::vect
         return;
     }
 }
-
+/**
+ * Wrapper for finding shortest path between 2 leaf nodes.
+ * @return vector of node id's from destination to source.
+ * TODO: better errror handling when nodes are missing
+*/
 std::vector<int> findShortestPath(TreeNode* root, int startUid, int endUid) {
     // Create a vector to store visited nodes
     std::vector<int> visited;
-    // Create a vector to store the parent of each visited node
-    std::vector<int> parent;
     TreeNode* startNode = findNode(root, startUid);
     bool found = false;
     // Declare the shortestPath vector
     std::vector<int> shortestPath;
     std::cout << "source " << startUid << " target " << endUid << std::endl;
     // Perform DFS starting from the root
-    dfs(startNode, endUid, visited, parent, shortestPath, startUid, &found);
+    dfs(startNode, endUid, visited, shortestPath, startUid, &found);
 
     return shortestPath;
 }
-
+/**
+ * Main function:
+ * Opens file, calls out functions to populate tree.
+ * Iteratively reads test cases from file and runs dfs algorithms to find paths.
+ * Prints out found paths to console.
+ * Closes file, destroys tree and frees up memory.
+ * TODO: refactor test reading part into separate function
+*/
 int main() {
     std::ifstream inputFile("input2.txt");
     if (!inputFile) {
@@ -135,7 +154,7 @@ int main() {
     TreeNode* root = createTree(inputFile);
     int K = 0;
     inputFile >> K;
-    std::cout << "there are " << K << " test cases" << std::endl;
+    std::cout << "there are " << K << " test cases:" << std::endl;
     
     for (size_t i = 0; i < K; i++)
     {
@@ -148,7 +167,6 @@ int main() {
         }
         std::cout << std::endl;
     }
-    
     
     inputFile.close();
 
